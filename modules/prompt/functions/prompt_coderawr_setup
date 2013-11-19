@@ -1,0 +1,74 @@
+#! /bin/sh
+
+# Initial version of Code Rawr's prompt. Inspired by pure prompt and
+# requires awesome font at the moment (Using an iterm 2 trick). Going to
+# fix it so that iterm is not required.
+
+# Example font awesome icons
+# clock
+# hub
+# git
+# forward
+# back
+# loading
+# beer
+# coffee
+# nonmarked
+# marked
+# plus
+# minus
+# no
+# yes
+
+function git_symbol() {
+    if (`git rev-parse --is-inside-work-tree &>/dev/null`)
+    then
+        local GITHUB=`git remote -v &>/dev/null | grep -c github.com`
+        if [[ $GITHUB > 0 ]] then
+            echo " "
+        else
+            echo " "
+        fi
+    else
+        echo ""
+    fi
+}
+
+# displays the exec time of the last command if set threshold was exceeded
+function summarize_execution() {
+    if [[ -n "$start" ]]
+    then
+        local stop=$(date +%s)
+        integer elapsed=$stop-$start
+
+        echo -n "%15<..<$history[$[HISTCMD-1]]"
+        (($elapsed > ${PURE_CMD_MAX_EXEC_TIME:=5})) && echo -n " %F{yellow} ${elapsed}s"
+        echo -n " %(?.%F{green}.%F{red})"
+    fi
+}
+
+function prompt_coderawr_preexec() {
+    start=$(date +%s)
+    # shows the current dir and executed command in the title when a process is active
+    printf "\e]0;$PWD:t: $2\a"
+}
+
+function prompt_coderawr_precmd() {
+    last_execution=$(summarize_execution)
+    unset start
+
+    print -Pn "\e]0;%~\a"
+    print -P "\n $(git_symbol) %F{blue}%~%F{8}%f"
+}
+
+function prompt_coderawr_setup(){
+    prompt_opts=(cr subst percent)
+    autoload -Uz add-zsh-hook
+    add-zsh-hook precmd prompt_coderawr_precmd
+    add-zsh-hook preexec prompt_coderawr_preexec
+
+    RPROMPT='${last_execution}'
+    PROMPT='%F{magenta}%f  '
+}
+
+prompt_coderawr_setup "$@"
